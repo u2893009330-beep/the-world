@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>The World</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: radial-gradient(circle at center, #1a1a2e, #0d0d17);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #f5f5f5;
+    overflow: hidden;
+  }
+  h1 {
+    margin: 10px 0 0 0;
+    font-size: 2.2em;
+    letter-spacing: 4px;
+    color: #ffd93d;
+    text-shadow: 0 0 15px rgba(255, 217, 61, 0.6);
+  }
+  .credit {
+    margin-bottom: 10px;
+    font-size: 0.95em;
+    color: #aaa;
+  }
+  .credit span {
+    color: #ffd93d;
+    font-weight: bold;
+  }
+  canvas {
+    background: #16213e;
+    border: 3px solid #ffd93d;
+    border-radius: 8px;
+    box-shadow: 0 0 25px rgba(255, 217, 61, 0.3);
+  }
+  .infos {
+    margin-top: 10px;
+    font-size: 0.85em;
+    color: #888;
+    text-align: center;
+  }
+  .infos b { color: #ffd93d; }
+
+  .admin-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    background: #16213e;
+    color: #ffd93d;
+    border: 2px solid #ffd93d;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.85em;
+    z-index: 10;
+  }
+  .admin-btn:hover {
+    background: #ffd93d;
+    color: #16213e;
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  .modal {
+    background: #16213e;
+    border: 2px solid #ffd93d;
+    border-radius: 10px;
+    padding: 25px 30px;
+    width: 320px;
+    box-shadow: 0 0 30px rgba(255,217,61,0.3);
+  }
+  .modal h2 {
+    margin-top: 0;
+    color: #ffd93d;
+    font-size: 1.2em;
+    text-align: center;
+  }
+  .modal label {
+    display: block;
+    margin-top: 14px;
+    font-size: 0.85em;
+    color: #ccc;
+  }
+  .modal input[type="password"],
+  .modal input[type="range"],
+  .modal input[type="color"] {
+    width: 100%;
+    margin-top: 5px;
+    box-sizing: border-box;
+  }
+  .modal input[type="password"] {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #444;
+    background: #0d0d17;
+    color: #fff;
+  }
+  .modal .row {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .modal button {
+    flex: 1;
+    padding: 9px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .btn-valider {
+    background: #ffd93d;
+    color: #16213e;
+  }
+  .btn-annuler {
+    background: #444;
+    color: #fff;
+  }
+  .erreur {
+    color: #ff6b6b;
+    font-size: 0.8em;
+    margin-top: 8px;
+    display: none;
+  }
+  .val-display {
+    color: #ffd93d;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<button class="admin-btn" id="adminBtn">⚙ Admin</button>
+
+<h1>THE WORLD</h1>
+<div class="credit">Créateur officiel : <span>Arthur.s</span></div>
+
+<canvas id="game" width="800" height="500"></canvas>
+
+<div class="infos">
+  <b>Z</b> avancer &nbsp;•&nbsp; <b>S</b> reculer &nbsp;•&nbsp; <b>Q</b> tourner à gauche &nbsp;•&nbsp; <b>D</b> tourner à droite
+</div>
+<div class="infos" id="buildInfo" style="display:none; color:#4ecdc4;"></div>
+
+<!-- Fenêtre mot de passe -->
+<div class="modal-overlay" id="loginOverlay">
+  <div class="modal">
+    <h2>🔒 Accès Administrateur</h2>
+    <label>Mot de passe</label>
+    <input type="password" id="pwdInput" placeholder="••••••••">
+    <div class="erreur" id="pwdErreur">Mot de passe incorrect.</div>
+    <div class="row">
+      <button class="btn-annuler" id="pwdAnnuler">Annuler</button>
+      <button class="btn-valider" id="pwdValider">Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- Panneau admin -->
+<div class="modal-overlay" id="adminOverlay">
+  <div class="modal">
+    <h2>⚙ Panneau Admin — Arthur.s</h2>
+    <label>Vitesse du personnage : <span class="val-display" id="speedVal">3</span></label>
+    <input type="range" id="speedRange" min="1" max="10" value="3">
+
+    <label>Vitesse de rotation : <span class="val-display" id="turnVal">0.06</span></label>
+    <input type="range" id="turnRange" min="1" max="20" value="6">
+
+    <label>Taille du personnage : <span class="val-display" id="sizeVal">20</span></label>
+    <input type="range" id="sizeRange" min="10" max="50" value="20">
+
+    <label>Couleur du personnage</label>
+    <input type="color" id="colorPicker" value="#ffd93d">
+
+    <label>Couleur des blocs</label>
+    <input type="color" id="blockColorPicker" value="#4ecdc4">
+
+    <div class="row">
+      <button class="btn-valider" id="buildModeBtn">🧱 Mode Construction : OFF</button>
+    </div>
+    <div class="row">
+      <button class="btn-annuler" id="eraseModeBtn">🧹 Mode Effacer : OFF</button>
+    </div>
+    <div class="row">
+      <button class="btn-annuler" id="clearAllBtn">🗑 Tout effacer</button>
+    </div>
+
+    <div class="row">
+      <button class="btn-annuler" id="adminFermer">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  angle: 0,
+  size: 20,
+  speed: 3,
+  turnSpeed: 0.06
+};
+
+const keys = {};
+const blocks = []; // { x, y, size, color }
+let isAdmin = false;
+let buildMode = false;
+let eraseMode = false;
+let blockColor = "#4ecdc4";
+let playerColor = "#ffd93d";
+const BLOCK_SIZE = 40;
+const ADMIN_PASSWORD = "arthur2026";
+
+document.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+});
+document.addEventListener('keyup', (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+function update() {
+  const prevX = player.x;
+  const prevY = player.y;
+
+  if (keys['z']) {
+    player.x += Math.cos(player.angle) * player.speed;
+    player.y += Math.sin(player.angle) * player.speed;
+  }
+  if (keys['s']) {
+    player.x -= Math.cos(player.angle) * player.speed;
+    player.y -= Math.sin(player.angle) * player.speed;
+  }
+  if (keys['q']) {
+    player.angle -= player.turnSpeed;
+  }
+  if (keys['d']) {
+    player.angle += player.turnSpeed;
+  }
+
+  // Collision avec les blocs
+  for (const b of blocks) {
+    if (
+      player.x + player.size / 2 > b.x &&
+      player.x - player.size / 2 < b.x + b.size &&
+      player.y + player.size / 2 > b.y &&
+      player.y - player.size / 2 < b.y + b.size
+    ) {
+      player.x = prevX;
+      player.y = prevY;
+      break;
+    }
+  }
+
+  // Empêche de sortir de l'écran
+  const margin = player.size;
+  if (player.x < margin) player.x = margin;
+  if (player.x > canvas.width - margin) player.x = canvas.width - margin;
+  if (player.y < margin) player.y = margin;
+  if (player.y > canvas.height - margin) player.y = canvas.height - margin;
+}
+
+function drawGrid() {
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+}
+
+function drawPlayer() {
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(player.angle);
+
+  // Corps du personnage (triangle jaune, pointe = sens de déplacement)
+  ctx.beginPath();
+  ctx.moveTo(player.size, 0);
+  ctx.lineTo(-player.size * 0.7, player.size * 0.7);
+  ctx.lineTo(-player.size * 0.7, -player.size * 0.7);
+  ctx.closePath();
+
+  ctx.fillStyle = playerColor;
+  ctx.shadowColor = playerColor;
+  ctx.shadowBlur = 20;
+  ctx.fill();
+
+  ctx.strokeStyle = '#b8960a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawBlocks() {
+  for (const b of blocks) {
+    ctx.fillStyle = b.color;
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 2;
+    ctx.fillRect(b.x, b.y, b.size, b.size);
+    ctx.strokeRect(b.x, b.y, b.size, b.size);
+  }
+}
+
+function loop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+  drawBlocks();
+  update();
+  drawPlayer();
+  requestAnimationFrame(loop);
+}
+
+loop();
+
+// ===== PANNEAU ADMIN (réservé à Arthur.s) =====
+const adminBtn = document.getElementById('adminBtn');
+const loginOverlay = document.getElementById('loginOverlay');
+const adminOverlay = document.getElementById('adminOverlay');
+const pwdInput = document.getElementById('pwdInput');
+const pwdErreur = document.getElementById('pwdErreur');
+const pwdValider = document.getElementById('pwdValider');
+const pwdAnnuler = document.getElementById('pwdAnnuler');
+const adminFermer = document.getElementById('adminFermer');
+
+adminBtn.addEventListener('click', () => {
+  pwdInput.value = '';
+  pwdErreur.style.display = 'none';
+  loginOverlay.classList.add('active');
+  pwdInput.focus();
+});
+
+function tryLogin() {
+  if (pwdInput.value === ADMIN_PASSWORD) {
+    isAdmin = true;
+    loginOverlay.classList.remove('active');
+    adminOverlay.classList.add('active');
+  } else {
+    pwdErreur.style.display = 'block';
+  }
+}
+
+pwdValider.addEventListener('click', tryLogin);
+pwdInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') tryLogin();
+});
+pwdAnnuler.addEventListener('click', () => {
+  loginOverlay.classList.remove('active');
+});
+adminFermer.addEventListener('click', () => {
+  adminOverlay.classList.remove('active');
+});
+
+// Réglages en direct
+const speedRange = document.getElementById('speedRange');
+const turnRange = document.getElementById('turnRange');
+const sizeRange = document.getElementById('sizeRange');
+const colorPicker = document.getElementById('colorPicker');
+const speedVal = document.getElementById('speedVal');
+const turnVal = document.getElementById('turnVal');
+const sizeVal = document.getElementById('sizeVal');
+
+speedRange.addEventListener('input', () => {
+  player.speed = parseFloat(speedRange.value);
+  speedVal.textContent = speedRange.value;
+});
+turnRange.addEventListener('input', () => {
+  player.turnSpeed = parseFloat(turnRange.value) / 100;
+  turnVal.textContent = player.turnSpeed.toFixed(2);
+});
+sizeRange.addEventListener('input', () => {
+  player.size = parseFloat(sizeRange.value);
+  sizeVal.textContent = sizeRange.value;
+});
+colorPicker.addEventListener('input', () => {
+  playerColor = colorPicker.value;
+});
+
+// ===== Mode Construction (admin uniquement) =====
+const blockColorPicker = document.getElementById('blockColorPicker');
+const buildModeBtn = document.getElementById('buildModeBtn');
+const eraseModeBtn = document.getElementById('eraseModeBtn');
+const clearAllBtn = document.getElementById('clearAllBtn');
+const buildInfo = document.getElementById('buildInfo');
+
+blockColorPicker.addEventListener('input', () => {
+  blockColor = blockColorPicker.value;
+});
+
+buildModeBtn.addEventListener('click', () => {
+  if (!isAdmin) return;
+  buildMode = !buildMode;
+  if (buildMode) eraseMode = false;
+  updateModeUI();
+});
+
+eraseModeBtn.addEventListener('click', () => {
+  if (!isAdmin) return;
+  eraseMode = !eraseMode;
+  if (eraseMode) buildMode = false;
+  updateModeUI();
+});
+
+clearAllBtn.addEventListener('click', () => {
+  if (!isAdmin) return;
+  blocks.length = 0;
+});
+
+function updateModeUI() {
+  buildModeBtn.textContent = "🧱 Mode Construction : " + (buildMode ? "ON" : "OFF");
+  eraseModeBtn.textContent = "🧹 Mode Effacer : " + (eraseMode ? "ON" : "OFF");
+
+  if (buildMode) {
+    buildInfo.style.display = 'block';
+    buildInfo.style.color = '#4ecdc4';
+    buildInfo.textContent = "🧱 Mode Construction actif — clique sur la carte pour poser un bloc";
+  } else if (eraseMode) {
+    buildInfo.style.display = 'block';
+    buildInfo.style.color = '#ff6b6b';
+    buildInfo.textContent = "🧹 Mode Effacer actif — clique sur un bloc pour le supprimer";
+  } else {
+    buildInfo.style.display = 'none';
+  }
+}
+
+canvas.addEventListener('click', (e) => {
+  if (!isAdmin) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  if (buildMode) {
+    const gx = Math.floor(mx / BLOCK_SIZE) * BLOCK_SIZE;
+    const gy = Math.floor(my / BLOCK_SIZE) * BLOCK_SIZE;
+    // Évite les doublons au même endroit
+    const exists = blocks.some(b => b.x === gx && b.y === gy);
+    if (!exists) {
+      blocks.push({ x: gx, y: gy, size: BLOCK_SIZE, color: blockColor });
+    }
+  } else if (eraseMode) {
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      const b = blocks[i];
+      if (mx >= b.x && mx <= b.x + b.size && my >= b.y && my <= b.y + b.size) {
+        blocks.splice(i, 1);
+        break;
+      }
+    }
+  }
+});
+</script>
+
+</body>
+</html>
